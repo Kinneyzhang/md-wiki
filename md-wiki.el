@@ -1,3 +1,35 @@
+;;; md-wiki.el --- wiki generator to static site on top of markdown.  -*- lexical-binding: t; -*-
+
+;; Copyright (C) 2021 Kinney Zhang
+;;
+;; Version: 0.0.1
+;; Keywords: convenience
+;; Author: Kinney Zhang <kinneyzhang666@gmail.com>
+;; URL: https://github.com/Kinneyzhang/md-wiki
+;; Package-Requires: ((emacs "24.4"))
+
+;; This file is not part of GNU Emacs.
+
+;; This program is free software; you can redistribute it and/or modify
+;; it under the terms of the GNU General Public License as published by
+;; the Free Software Foundation; either version 3, or (at your option)
+;; any later version.
+
+;; This program is distributed in the hope that it will be useful,
+;; but WITHOUT ANY WARRANTY; without even the implied warranty of
+;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+;; GNU General Public License for more details.
+
+;; You should have received a copy of the GNU General Public License
+;; along with this program; if not, write to the Free Software
+;; Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+
+;;; Commentary:
+
+;; Md-wiki is wiki generator to static site on top of markdown.
+
+;;; Code:
+
 (defvar md-wiki-dir "~/geekblog/content/gknows"
   "Directory of all md-wiki pages.")
 
@@ -8,7 +40,7 @@ Feel free to modify it to add, update or delete pages.")
 (defvar md-wiki-diff-file (concat user-emacs-directory "mdwiki-diff.el")
   "The structure used to diff")
 
-(defvar md-wiki-index-page "wikimap")
+(defvar md-wiki-index-page "index")
 
 (defvar md-wiki-index-page-shown "INDEX")
 
@@ -207,7 +239,7 @@ Feel free to modify it to add, update or delete pages.")
   "Delete the md-wiki page according to config."
   (delete-file (md-wiki-page-file page) t))
 
-(defun md-wiki-render-map ()
+(defun md-wiki-render-index ()
   "Generate wiki sitemap page"
   (let* ((index-file (md-wiki-page-file md-wiki-index-page))
          (pairs (md-wiki-structures))
@@ -220,7 +252,7 @@ Feel free to modify it to add, update or delete pages.")
                           pairs)))
     (with-file-buffer index-file
       (erase-buffer)
-      (md-wiki-insert-metas md-wiki-index-page)
+      (md-wiki-insert-metas md-wiki-index-page-shown)
       (insert "---\n" (string-join str-lst "\n"))
       (save-buffer))))
 
@@ -279,9 +311,9 @@ Return the pages need to add, update and delete."
   (let ((diff (md-wiki-config-diff)))
     (when force-nav (md-wiki-gen-pages diff t))
     (when force-meta (md-wiki-gen-pages diff nil t))
-    (when (or force-nav force-meta) (md-wiki-render-map))
+    (when (or force-nav force-meta) (md-wiki-render-index))
     (when (md-wiki-diff-p diff)
-      (md-wiki-render-map))
+      (md-wiki-render-index))
     (md-wiki-gen-pages diff)
     ;; backup current config file to `md-wiki-diff-file'.
     (md-wiki-config-backup)))
