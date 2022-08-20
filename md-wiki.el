@@ -10,13 +10,19 @@ Feel free to modify it to add, update or delete pages.")
 
 (defvar md-wiki-index-page "wikimap")
 
+(defvar md-wiki-index-page-shown "INDEX")
+
 (defvar md-wiki-prefix-url "/gknows")
 
-(defvar md-wiki-parents-nav-prefix "PARENTS: ")
+(defvar md-wiki-parents-html-wrapper "<span><center>%s</center></span>")
+
+(defvar md-wiki-children-html-wrapper "<small><center>%s</center></small>")
+
+(defvar md-wiki-parents-nav-prefix "")
 
 (defvar md-wiki-parents-nav-sep " > ")
 
-(defvar md-wiki-children-nav-prefix "CHILDREN: ")
+(defvar md-wiki-children-nav-prefix "")
 
 (defvar md-wiki-children-nav-sep " | ")
 
@@ -130,22 +136,24 @@ Feel free to modify it to add, update or delete pages.")
                separator))
 
 (defun md-wiki-index-page-link ()
-  (md-wiki-fmt-page-link md-wiki-index-page (downcase md-wiki-index-page)))
+  (md-wiki-fmt-page-link md-wiki-index-page-shown (downcase md-wiki-index-page)))
 
 (defun md-wiki-compose-parents-nav (page)
   (let* ((pages (md-wiki-parents-pages page))
          (index-link (md-wiki-index-page-link))
          (sep md-wiki-parents-nav-sep)
-         (link-str (md-wiki-join-page-link pages sep)))
+         (link-str (md-wiki-join-page-link pages sep))
+         (html-wrapper md-wiki-parents-html-wrapper))
     (if pages
-        (concat md-wiki-parents-nav-prefix index-link sep link-str sep page)
-      (concat md-wiki-parents-nav-prefix index-link sep page))))
+        (format html-wrapper (concat md-wiki-parents-nav-prefix index-link sep link-str sep page))
+      (format html-wrapper (concat md-wiki-parents-nav-prefix index-link sep page)))))
 
 (defun md-wiki-compose-children-nav (page)
   (let* ((pages (md-wiki-children-pages page))
          (sep md-wiki-children-nav-sep)
-         (link-str (md-wiki-join-page-link pages sep)))
-    (when pages (concat md-wiki-children-nav-prefix link-str))))
+         (link-str (md-wiki-join-page-link pages sep))
+         (html-wrapper md-wiki-children-html-wrapper))
+    (when pages (format html-wrapper (concat md-wiki-children-nav-prefix link-str)))))
 
 (defun md-wiki-insert-navs (page)
   (let* ((parents-str (md-wiki-compose-parents-nav page))
