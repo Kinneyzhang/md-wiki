@@ -241,7 +241,7 @@ Feel free to modify it to add, update or delete pages.")
 
 (defun md-wiki-render-index ()
   "Generate wiki sitemap page"
-  (let* ((index-file (md-wiki-page-file md-wiki-index-page))
+  (let* ((index-file (md-wiki-page-file md-wiki-index-page-shown))
          (pairs (md-wiki-structures))
          (str-lst (mapcar (lambda (pair)
                             (let ((title (car pair))
