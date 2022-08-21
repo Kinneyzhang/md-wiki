@@ -161,14 +161,18 @@ Feel free to modify it to add, update or delete pages.")
 (defun md-wiki-fmt-page-link (page slug)
   (format "[%s](%s)" page (concat md-wiki-prefix-url "/" slug)))
 
+(defun md-wiki-page-slugfy (page)
+  (downcase (string-join (split-string page "[ ]+" t) "-")))
+
 (defun md-wiki-join-page-link (pages separator)
   (string-join (mapcar (lambda (page)
-                         (md-wiki-fmt-page-link page (downcase page)))
+                         (md-wiki-fmt-page-link page (md-wiki-page-slugfy page)))
                        pages)
                separator))
 
 (defun md-wiki-index-page-link ()
-  (md-wiki-fmt-page-link md-wiki-index-page-shown (downcase md-wiki-index-page)))
+  (md-wiki-fmt-page-link md-wiki-index-page-shown
+                         (md-wiki-page-slugfy md-wiki-index-page)))
 
 (defun md-wiki-compose-parents-nav (page)
   (let* ((pages (md-wiki-parents-pages page))
@@ -248,7 +252,7 @@ Feel free to modify it to add, update or delete pages.")
                                   (level (cdr pair)))
                               (concat
                                (format "%s- " (make-string (* level 2) ? ))
-                               (md-wiki-fmt-page-link title (downcase title)))))
+                               (md-wiki-fmt-page-link title (md-wiki-page-slugfy title)))))
                           pairs)))
     (with-file-buffer index-file
       (erase-buffer)
