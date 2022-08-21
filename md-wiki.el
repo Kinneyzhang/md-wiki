@@ -312,11 +312,21 @@ Return the pages need to add, update and delete."
     (when force-nav (md-wiki-gen-pages diff t))
     (when force-meta (md-wiki-gen-pages diff nil t))
     (when (or force-nav force-meta) (md-wiki-render-index))
-    (when (md-wiki-diff-p diff)
-      (md-wiki-render-index))
-    (md-wiki-gen-pages diff)
+    (when (md-wiki-diff-p diff) (md-wiki-render-index))
+    (unless (or force-nav force-meta)
+      (md-wiki-gen-pages diff))
     ;; backup current config file to `md-wiki-diff-file'.
     (md-wiki-config-backup)))
+
+;;;###autoload
+(defun md-wiki-gen-site-force-nav ()
+  (interactive)
+  (md-wiki-gen-site t))
+
+;;;###autoload
+(defun md-wiki-gen-site-force-meta ()
+  (interactive)
+  (md-wiki-gen-site nil t))
 
 ;;;###autoload
 (defun md-wiki-page-edit ()
@@ -325,5 +335,19 @@ Return the pages need to add, update and delete."
                                (md-wiki-structures))))
     (find-file (md-wiki-page-file page))
     (goto-char (point-max))))
+
+;;;###autoload
+(defun md-wiki-tree-edit ()
+  (interactive)
+  (find-file md-wiki-tree-file))
+
+;;;###autoload
+(defun md-wiki-show-diff ()
+  (interactive)
+  (let ((diff (md-wiki-config-diff)))
+    (message "add:%s | delete:%s | update:%s"
+             (plist-get diff :add)
+             (plist-get diff :delete)
+             (plist-get diff :update))))
 
 (provide 'md-wiki)
