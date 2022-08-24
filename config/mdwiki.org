@@ -8,9 +8,10 @@
   - 操作系统
   - 数据库
     - sqlite
-  - Python
   - Linux
   - Emacs
+  - Python
+  - Java
 - 生活消费
   - 出行与旅游
   - 经验常识
