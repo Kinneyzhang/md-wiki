@@ -264,7 +264,7 @@ Feel free to modify it to add, update or delete pages.")
 
 (defvar md-wiki-bookmark-separator " / ")
 
-(defvar md-wiki-bookmark-prefix "快捷访问>> ")
+(defvar md-wiki-bookmark-prefix "快捷访问> ")
 
 (defun md-wiki-bookmarks ()
   (string-join (mapcar (lambda (title)
