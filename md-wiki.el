@@ -60,6 +60,8 @@ Feel free to modify it to add, update or delete pages.")
 
 (defvar md-wiki-meta-fmt "---\ntitle: %s\ntype: post\nlayout: daily\ntoc: false\ncomment: false\n---")
 
+(defvar md-wiki-browse-url-base "https://geekinney.com/gknows/")
+
 ;;;; Utilities
 (defun file-contents (file)
   (with-temp-buffer
@@ -158,15 +160,21 @@ Feel free to modify it to add, update or delete pages.")
 (defun md-wiki-insert-metas (page)
   (insert (format md-wiki-meta-fmt page)))
 
+(defun md-wiki-metas (page)
+  (format md-wiki-meta-fmt page))
+
 (defun md-wiki-fmt-page-link (page slug)
   (format "[%s](%s)" page (concat md-wiki-prefix-url "/" slug)))
 
 (defun md-wiki-page-slugfy (page)
   (downcase (string-join (split-string page "[ ]+" t) "-")))
 
+(defun md-wiki-page-link (page)
+  (md-wiki-fmt-page-link page (md-wiki-page-slugfy page)))
+
 (defun md-wiki-join-page-link (pages separator)
   (string-join (mapcar (lambda (page)
-                         (md-wiki-fmt-page-link page (md-wiki-page-slugfy page)))
+                         (md-wiki-page-link page))
                        pages)
                separator))
 
@@ -205,7 +213,7 @@ Feel free to modify it to add, update or delete pages.")
   (with-file-buffer (md-wiki-page-file page)
     ;; Renew the deleted file, the content still exists? need to earse buffer.
     (erase-buffer)
-    (md-wiki-insert-metas page)
+    (insert (md-wiki-metas page))
     (insert "\n")
     (md-wiki-insert-navs page)
     (save-buffer)))
@@ -236,28 +244,44 @@ Feel free to modify it to add, update or delete pages.")
                      (point)
                    (error "error format of md-wiki meta"))))
         (delete-region beg end)
-        (md-wiki-insert-metas page)))
+        (insert (md-wiki-metas page))))
     (save-buffer)))
 
 (defun md-wiki-page-delete (page)
   "Delete the md-wiki page according to config."
   (delete-file (md-wiki-page-file page) t))
 
+(defun md-wiki-index-item-list ()
+  (mapcar (lambda (pair)
+            (let ((title (car pair))
+                  (level (cdr pair)))
+              (concat (format "%s- " (make-string (* level 2) ? ))
+                      (md-wiki-page-link title))))
+          (md-wiki-structures)))
+
+(defvar md-wiki-bookmark-list
+  '("Daily Page" "费曼学习法" "Emacs"))
+
+(defvar md-wiki-bookmark-separator " / ")
+
+(defvar md-wiki-bookmark-prefix "快捷访问>> ")
+
+(defun md-wiki-bookmarks ()
+  (string-join (mapcar (lambda (title)
+                         (md-wiki-page-link title))
+                       md-wiki-bookmark-list)
+               md-wiki-bookmark-separator))
+
 (defun md-wiki-render-index ()
   "Generate wiki sitemap page"
   (let* ((index-file (md-wiki-page-file md-wiki-index-page-shown))
-         (pairs (md-wiki-structures))
-         (str-lst (mapcar (lambda (pair)
-                            (let ((title (car pair))
-                                  (level (cdr pair)))
-                              (concat
-                               (format "%s- " (make-string (* level 2) ? ))
-                               (md-wiki-fmt-page-link title (md-wiki-page-slugfy title)))))
-                          pairs)))
+         (str-lst (md-wiki-index-item-list))
+         (index-str (string-join str-lst "\n")))
     (with-file-buffer index-file
       (erase-buffer)
-      (md-wiki-insert-metas md-wiki-index-page-shown)
-      (insert "---\n" (string-join str-lst "\n"))
+      (insert (md-wiki-metas md-wiki-index-page-shown))
+      (insert "\n---\n" md-wiki-bookmark-prefix (md-wiki-bookmarks) "\n\n---")
+      (insert "\n" index-str)
       (save-buffer))))
 
 (defun md-wiki-gen-pages (diff &optional force-nav force-meta)
@@ -309,6 +333,8 @@ Return the pages need to add, update and delete."
       (plist-get diff :update)
       (plist-get diff :delete)))
 
+;;;; Commands
+
 ;;;###autoload
 (defun md-wiki-gen-site (&optional force-nav force-meta)
   (interactive)
@@ -353,6 +379,16 @@ Return the pages need to add, update and delete."
              (plist-get diff :add)
              (plist-get diff :delete)
              (plist-get diff :update))))
+
+;;;###autoload
+(defun md-wiki-browse-page ()
+  "Open page through browser."
+  (interactive)
+  (let* ((page (completing-read "Choose a page to browse: "
+                                (append (list (list md-wiki-index-page-shown))
+                                        (md-wiki-structures))))
+         (url (concat md-wiki-browse-url-base (md-wiki-page-slugfy page))))
+    (browse-url url)))
 
 
 (provide 'md-wiki)
