@@ -374,13 +374,16 @@ Return the pages need to add, update and delete."
   (interactive)
   (md-wiki-gen-site nil t))
 
+(defun md-wiki-page-find (title)
+  (find-file (md-wiki-page-file title))
+  (goto-char (point-max)))
+
 ;;;###autoload
 (defun md-wiki-page-edit ()
   (interactive)
-  (let ((page (completing-read "Choose a page to edit: "
-                               (md-wiki-structures))))
-    (find-file (md-wiki-page-file page))
-    (goto-char (point-max))))
+  (let ((title (completing-read "Choose a page to edit: "
+                                (md-wiki-structures))))
+    (md-wiki-page-find title)))
 
 ;;;###autoload
 (defun md-wiki-tree-edit ()

@@ -12,6 +12,7 @@
   - Emacs
   - Python
   - Java
+  - Git
 - 生活消费
   - 出行与旅游
   - 经验常识
