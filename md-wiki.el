@@ -62,6 +62,13 @@ Feel free to modify it to add, update or delete pages.")
 
 (defvar md-wiki-browse-url-base "https://geekinney.com/gknows/")
 
+(defvar md-wiki-bookmark-list '("Daily Page" "费曼学习法" "Emacs"))
+
+(defvar md-wiki-bookmark-separator " / ")
+
+(defvar md-wiki-bookmark-prefix "快捷访问> ")
+
+
 ;;;; Utilities
 (defun file-contents (file)
   (with-temp-buffer
@@ -259,18 +266,27 @@ Feel free to modify it to add, update or delete pages.")
                       (md-wiki-page-link title))))
           (md-wiki-structures)))
 
-(defvar md-wiki-bookmark-list
-  '("Daily Page" "费曼学习法" "Emacs"))
-
-(defvar md-wiki-bookmark-separator " / ")
-
-(defvar md-wiki-bookmark-prefix "快捷访问> ")
-
 (defun md-wiki-bookmarks ()
   (string-join (mapcar (lambda (title)
                          (md-wiki-page-link title))
                        md-wiki-bookmark-list)
                md-wiki-bookmark-separator))
+
+;;;
+
+(defun md-wiki-page-content (title)
+  (let ((content (file-contents (md-wiki-page-file title))))
+    ))
+
+
+;; (save-match-data
+;;   (string-match "\\(---\\(\n.+\\)*\\)\\{3\\}\n---"
+;;                 (file-contents (md-wiki-page-file "费曼学习法")))
+;;   (match-end 0))
+
+;; (defun md-wiki-page-content-linum (title)
+;;   "Return the line number of content in page."
+;;   )
 
 (defun md-wiki-render-index ()
   "Generate wiki sitemap page"
@@ -389,6 +405,5 @@ Return the pages need to add, update and delete."
                                         (md-wiki-structures))))
          (url (concat md-wiki-browse-url-base (md-wiki-page-slugfy page))))
     (browse-url url)))
-
 
 (provide 'md-wiki)
