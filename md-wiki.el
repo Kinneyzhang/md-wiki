@@ -258,13 +258,7 @@ Feel free to modify it to add, update or delete pages.")
   "Delete the md-wiki page according to config."
   (delete-file (md-wiki-page-file page) t))
 
-(defun md-wiki-index-item-list ()
-  (mapcar (lambda (pair)
-            (let ((title (car pair))
-                  (level (cdr pair)))
-              (concat (format "%s- " (make-string (* level 2) ? ))
-                      (md-wiki-page-link title))))
-          (md-wiki-structures)))
+;;; Index Page
 
 (defun md-wiki-bookmarks ()
   (string-join (mapcar (lambda (title)
@@ -272,24 +266,32 @@ Feel free to modify it to add, update or delete pages.")
                        md-wiki-bookmark-list)
                md-wiki-bookmark-separator))
 
-;;;
-
 (defun md-wiki-page-content (title)
   (let ((content (file-contents (md-wiki-page-file title))))
-    ))
+    (save-match-data
+      (if (string-match "---\\(\n.*\\)+\\(\n---\\)\\{2\\}\\(\n.*\\)+\n---" content)
+          (substring-no-properties content (1+ (match-end 0)))
+        (error "Invalid page header format: %s" title)))))
 
+(defun md-wiki-page-content-linum (title)
+  "Return the line number of content in page."
+  (with-temp-buffer
+    (insert (md-wiki-page-content title))
+    (count-lines (point-min) (point-max))))
 
-;; (save-match-data
-;;   (string-match "\\(---\\(\n.+\\)*\\)\\{3\\}\n---"
-;;                 (file-contents (md-wiki-page-file "费曼学习法")))
-;;   (match-end 0))
-
-;; (defun md-wiki-page-content-linum (title)
-;;   "Return the line number of content in page."
-;;   )
+(defun md-wiki-index-item-list ()
+  "Return a list of each line string for Index page."
+  (mapcar (lambda (pair)
+            (let ((title (car pair))
+                  (level (cdr pair)))
+              (format "%s- %s (%s)" (format "%s" (make-string (* level 2) ? ))
+                      (md-wiki-page-link title)
+                      (md-wiki-page-content-linum title))))
+          (md-wiki-structures)))
 
 (defun md-wiki-render-index ()
   "Generate wiki sitemap page"
+  (interactive)
   (let* ((index-file (md-wiki-page-file md-wiki-index-page-shown))
          (str-lst (md-wiki-index-item-list))
          (index-str (string-join str-lst "\n")))
@@ -299,6 +301,8 @@ Feel free to modify it to add, update or delete pages.")
       (insert "\n---\n" md-wiki-bookmark-prefix (md-wiki-bookmarks) "\n\n---")
       (insert "\n" index-str)
       (save-buffer))))
+
+;;; Common Pages
 
 (defun md-wiki-gen-pages (diff &optional force-nav force-meta)
   "Generate wiki pages according to DIFF."
@@ -382,7 +386,8 @@ Return the pages need to add, update and delete."
 (defun md-wiki-page-edit ()
   (interactive)
   (let ((title (completing-read "Choose a page to edit: "
-                                (md-wiki-structures))))
+                                (append `((,md-wiki-index-page-shown))
+                                        (md-wiki-structures)))))
     (md-wiki-page-find title)))
 
 ;;;###autoload
@@ -408,5 +413,67 @@ Return the pages need to add, update and delete."
                                         (md-wiki-structures))))
          (url (concat md-wiki-browse-url-base (md-wiki-page-slugfy page))))
     (browse-url url)))
+
+(defvar md-wiki-return-window-conf nil
+  "The window configuration of md-wiki before capturing a page.")
+
+(defvar md-wiki-capture-page nil)
+
+(defvar md-wiki-capture-point nil)
+
+(defvar md-wiki-capture-buf "*Wiki Capture*")
+
+;;; Capture
+(define-minor-mode md-wiki-capture-mode
+  "Minor mode for md-wiki capture buffer."
+  nil nil
+  (let ((map (make-sparse-keymap)))
+    (define-key map (kbd "C-c C-c") #'md-wiki-capture-finish)
+    (define-key map (kbd "C-c C-k") #'md-wiki-capture-cancel)
+    map)
+  (if md-wiki-capture-mode
+      (setq-local header-line-format
+                  (substitute-command-keys
+                   "\\<md-wiki-capture-mode-map>Capture text, finish \
+`\\[md-wiki-capture-finish]', cancel `\\[md-wiki-capture-cancel]'."))
+    (setq-local header-line-format nil)))
+
+(defun md-wiki-capture-finish ()
+  (interactive)
+  (setq md-wiki-capture-point (point)) ;; store the cursor point
+  (let ((content (buffer-substring (point-min) (point-max))))
+    (with-current-buffer (find-file-noselect
+                          (md-wiki-page-file md-wiki-capture-page))
+      (erase-buffer)
+      (insert content)
+      (goto-char md-wiki-capture-point))) ;; restore the cursor point
+  (set-window-configuration md-wiki-return-window-conf)
+  (kill-buffer md-wiki-capture-buf))
+
+(defun md-wiki-capture-cancel ()
+  (interactive)
+  (set-window-configuration md-wiki-return-window-conf)
+  (kill-buffer md-wiki-capture-buf)
+  (setq md-wiki-return-window-conf nil)
+  (setq md-wiki-capture-page nil)
+  (setq md-wiki-capture-point nil))
+
+;;;###autoload
+(defun md-wiki-page-capture ()
+  "Quick edit a page in a capture buffer."
+  (interactive)
+  (let* ((title (completing-read "Choose a page to edit: "
+                                 (append `((,md-wiki-index-page-shown))
+                                         (md-wiki-structures))))
+         (content (file-contents (md-wiki-page-file title))))
+    (setq md-wiki-return-window-conf (current-window-configuration))
+    (setq md-wiki-capture-page title)
+    (switch-to-buffer (get-buffer-create md-wiki-capture-buf) nil)
+    (insert content)
+    (markdown-mode)
+    (md-wiki-capture-mode 1)))
+
+;; (md-wiki-page-capture "费曼学习法")
+;; (clone-buffer "费曼学习法2")
 
 (provide 'md-wiki)
