@@ -85,6 +85,27 @@ Feel free to modify it to add, update or delete pages.")
 (defun md-wiki-page-file (page)
   (expand-file-name (concat page ".md") md-wiki-dir))
 
+(defun md-wiki-page-p ()
+  "judge if current buffer belongs to a md-wiki page."
+  (file-equal-p (file-name-directory (buffer-file-name)) md-wiki-dir))
+
+;; (defun md-wiki-page-exist (title)
+;;   "Judge if it exists the page with TITLE."
+;;   )
+
+(defun md-wiki-curr-page-title ()
+  "return the title of current buffer page."
+  (if (md-wiki-page-p)
+      (save-excursion
+        (goto-char (point-min))
+        (save-match-data
+          (if (re-search-forward "---\n\\(.+\n\\)+?---" nil t)
+              (let ((header (match-string-no-properties 0)))
+                (string-match "title: *\\(.+\\)" header)
+                (string-trim (match-string-no-properties 1 header)))
+            (error "Wrong header format of current page!"))))
+    (error "Current is not a md-wiki page!")))
+
 (defun md-wiki-structures ()
   (unless (file-exists-p md-wiki-tree-file)
     (error "Md-wiki tree file not exists: please refer to `md-wiki-tree-file'!"))
@@ -404,26 +425,32 @@ Return the pages need to add, update and delete."
              (plist-get diff :delete)
              (plist-get diff :update))))
 
+(defun md-wiki--browse-page (title)
+  (browse-url (concat md-wiki-browse-url-base (md-wiki-page-slugfy title))))
+
 ;;;###autoload
 (defun md-wiki-browse-page ()
   "Open page through browser."
   (interactive)
-  (let* ((page (completing-read "Choose a page to browse: "
+  (let ((title (completing-read "Choose a page to browse: "
                                 (append (list (list md-wiki-index-page-shown))
-                                        (md-wiki-structures))))
-         (url (concat md-wiki-browse-url-base (md-wiki-page-slugfy page))))
-    (browse-url url)))
+                                        (md-wiki-structures)))))
+    (md-wiki--browse-page title)))
 
-(defvar md-wiki-return-window-conf nil
-  "The window configuration of md-wiki before capturing a page.")
-
-(defvar md-wiki-capture-page nil)
-
-(defvar md-wiki-capture-point nil)
-
-(defvar md-wiki-capture-buf "*Wiki Capture*")
+;;;###autoload
+(defun md-wiki-browse-curr-page ()
+  "Open current page through browser"
+  (interactive)
+  (let ((title (md-wiki-curr-page-title)))
+    (md-wiki--browse-page title)))
 
 ;;; Capture
+(defvar md-wiki-return-window-conf nil
+  "The window configuration of md-wiki before capturing a page.")
+(defvar md-wiki-capture-page nil)
+(defvar md-wiki-capture-point nil)
+(defvar md-wiki-capture-buf "*Wiki Capture*")
+
 (define-minor-mode md-wiki-capture-mode
   "Minor mode for md-wiki capture buffer."
   nil nil
