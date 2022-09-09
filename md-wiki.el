@@ -448,7 +448,6 @@ Return the pages need to add, update and delete."
 (defvar md-wiki-return-window-conf nil
   "The window configuration of md-wiki before capturing a page.")
 (defvar md-wiki-capture-page nil)
-(defvar md-wiki-capture-point nil)
 (defvar md-wiki-capture-buf "*Wiki Capture*")
 
 (define-minor-mode md-wiki-capture-mode
@@ -467,13 +466,11 @@ Return the pages need to add, update and delete."
 
 (defun md-wiki-capture-finish ()
   (interactive)
-  (setq md-wiki-capture-point (point)) ;; store the cursor point
   (let ((content (buffer-substring (point-min) (point-max))))
     (with-current-buffer (find-file-noselect
                           (md-wiki-page-file md-wiki-capture-page))
       (erase-buffer)
-      (insert content)
-      (goto-char md-wiki-capture-point))) ;; restore the cursor point
+      (insert content)))
   (set-window-configuration md-wiki-return-window-conf)
   (kill-buffer md-wiki-capture-buf))
 
@@ -482,16 +479,15 @@ Return the pages need to add, update and delete."
   (set-window-configuration md-wiki-return-window-conf)
   (kill-buffer md-wiki-capture-buf)
   (setq md-wiki-return-window-conf nil)
-  (setq md-wiki-capture-page nil)
-  (setq md-wiki-capture-point nil))
+  (setq md-wiki-capture-page nil))
 
 ;;;###autoload
-(defun md-wiki-page-capture ()
+(defun md-wiki-page-capture (&optional title)
   "Quick edit a page in a capture buffer."
   (interactive)
-  (let* ((title (completing-read "Choose a page to edit: "
-                                 (append `((,md-wiki-index-page-shown))
-                                         (md-wiki-structures))))
+  (let* ((title (or title (completing-read "Choose a page to edit: "
+                                           (append `((,md-wiki-index-page-shown))
+                                                   (md-wiki-structures)))))
          (content (file-contents (md-wiki-page-file title))))
     (setq md-wiki-return-window-conf (current-window-configuration))
     (setq md-wiki-capture-page title)
@@ -500,7 +496,84 @@ Return the pages need to add, update and delete."
     (markdown-mode)
     (md-wiki-capture-mode 1)))
 
-;; (md-wiki-page-capture "费曼学习法")
-;; (clone-buffer "费曼学习法2")
+;;; wiki tree
+
+;; (md-wiki-structures)
+(require 'ewoc)
+(defvar md-wiki-ewoc nil)
+(defvar md-wiki-tree-mode-map nil)
+(defvar md-wiki-tree-buffer "*Md-Wiki Tree*")
+
+(defun md-wiki-tree-pp (cons)
+  "Pretty printer of md-wiki tree."
+  (let ((title (car cons))
+        (level (cdr cons)))
+    (insert (format "%s• %s" (make-string (* 2 level) ? )
+                    (propertize title 'face 'font-lock-function-name-face)))))
+
+(defun md-wiki-tree-buf-setup ()
+  (let ((inhibit-read-only t))
+    (kill-all-local-variables)
+    (setq major-mode 'md-wiki-tree-mode
+          mode-name "Wiki Tree")
+    (use-local-map md-wiki-tree-mode-map)
+    (erase-buffer)
+    (buffer-disable-undo)))
+
+(defun md-wiki-tree-buffer-render ()
+  (switch-to-buffer (get-buffer-create md-wiki-tree-buffer))
+  (md-wiki-tree-buf-setup)
+  (md-wiki-tree-keymap-setup)
+  (let ((ewoc (ewoc-create 'md-wiki-tree-pp
+                           (propertize "MD-WIKI\n" 'face '(:height 1.5))
+                           ;; (substitute-command-keys "\n\\{md-wiki-tree-mode-map}")
+                           )))
+    (set (make-local-variable 'md-wiki-ewoc) ewoc)
+    (dolist (data (md-wiki-structures))
+      (ewoc-enter-last ewoc data)))
+  (read-only-mode 1))
+
+;;;###autoload
+(defun md-wiki-tree-show ()
+  "Show the tree buffer of md-wiki."
+  (interactive)
+  (if-let ((buf (get-buffer md-wiki-tree-buffer)))
+      (switch-to-buffer buf)
+    (md-wiki-tree-buffer-render)))
+
+;;;###autoload
+(defun md-wiki-tree-refresh ()
+  (interactive)
+  (let ((inhibit-read-only t))
+    (md-wiki-tree-buffer-render)
+    (message "[md-wiki] wiki tree refreshed.")))
+
+(defun md-wiki-ewoc-data ()
+  "Return data at current ewoc position."
+  (ewoc-data (ewoc-locate md-wiki-ewoc)))
+
+(defun md-wiki-ewoc-title ()
+  "Return page title at current ewoc position."
+  (car (md-wiki-ewoc-data)))
+
+;;;###autoload
+(defun md-wiki-tree-page-edit ()
+  "Enter the page at point."
+  (interactive)
+  (md-wiki-page-find (md-wiki-ewoc-title)))
+
+;;;###autoload
+(defun md-wiki-tree-page-capture ()
+  (interactive)
+  (md-wiki-page-capture (md-wiki-ewoc-title)))
+
+(defun md-wiki-tree-keymap-setup ()
+  (setq md-wiki-tree-mode-map
+        (let ((map (make-sparse-keymap)))
+          (suppress-keymap map)
+          (define-key map (kbd "G") #'md-wiki-tree-refresh)
+          (define-key map (kbd "<RET>") #'md-wiki-tree-page-edit)
+          (define-key map (kbd "<S-return>") #'md-wiki-tree-page-capture)
+          map)))
 
 (provide 'md-wiki)
