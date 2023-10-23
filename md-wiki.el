@@ -296,18 +296,20 @@ Feel free to modify it to add, update or delete pages.")
 
 (defun md-wiki-page-content-linum (title)
   "Return the line number of content in page."
-  (with-temp-buffer
-    (insert (md-wiki-page-content title))
-    (count-lines (point-min) (point-max))))
+  (when (file-exists-p (md-wiki-page-content title))
+    (with-temp-buffer
+      (insert (md-wiki-page-content title))
+      (count-lines (point-min) (point-max)))))
 
 (defun md-wiki-index-item-list ()
   "Return a list of each line string for Index page."
   (mapcar (lambda (pair)
             (let ((title (car pair))
                   (level (cdr pair)))
-              (format "%s- %s (%s)" (format "%s" (make-string (* level 2) ? ))
+              (format "%s- %s (%s)"
+                      (format "%s" (make-string (* level 2) ? ))
                       (md-wiki-page-link title)
-                      (md-wiki-page-content-linum title))))
+                      (or (md-wiki-page-content-linum title) 0))))
           (md-wiki-structures)))
 
 (defun md-wiki-render-index ()
@@ -330,6 +332,7 @@ Feel free to modify it to add, update or delete pages.")
   (let ((add-pages (plist-get diff :add))
         (update-pages (plist-get diff :update))
         (delete-pages (plist-get diff :delete)))
+    (message "add-pages:%s" add-pages)
     (when add-pages (mapcar #'md-wiki-page-new add-pages))
     (when update-pages (mapcar #'md-wiki-page-update-nav update-pages))
     (when delete-pages (mapcar #'md-wiki-page-delete delete-pages))
@@ -452,7 +455,7 @@ Return the pages need to add, update and delete."
 
 (define-minor-mode md-wiki-capture-mode
   "Minor mode for md-wiki capture buffer."
-  nil nil
+  :global nil
   (let ((map (make-sparse-keymap)))
     (define-key map (kbd "C-c C-c") #'md-wiki-capture-finish)
     (define-key map (kbd "C-c C-k") #'md-wiki-capture-cancel)
@@ -485,9 +488,10 @@ Return the pages need to add, update and delete."
 (defun md-wiki-page-capture (&optional title)
   "Quick edit a page in a capture buffer."
   (interactive)
-  (let* ((title (or title (completing-read "Choose a page to edit: "
-                                           (append `((,md-wiki-index-page-shown))
-                                                   (md-wiki-structures)))))
+  (let* ((title (or title
+                    (completing-read "Choose a page to edit: "
+                                     (append `((,md-wiki-index-page-shown))
+                                             (md-wiki-structures)))))
          (content (file-contents (md-wiki-page-file title))))
     (setq md-wiki-return-window-conf (current-window-configuration))
     (setq md-wiki-capture-page title)
